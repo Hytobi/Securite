@@ -1,0 +1,6 @@
+comment alice peut envoyer un message a bob ? #td2
+
+y'a quoi dans un signature ?  emprunte chifreé du message ?
+comment etre sur de l'identité de l'expediteur ? # cle privé / cle public
+
+ya quoi dan sun certificat ?
