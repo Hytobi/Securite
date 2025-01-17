@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  server:
+    build:
+      context: ./server
+    container_name: ssl_server
+    networks:
+      - ssl_network
+
+  client:
+    build:
+      context: ./client
+    container_name: ssl_client
+    depends_on:
+      - server
+    networks:
+      - ssl_network
+
+networks:
+  ssl_network:
+    driver: bridge
