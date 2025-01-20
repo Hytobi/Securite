@@ -1,0 +1,23 @@
+flush ruleset
+
+table inet FILTER {
+  chain INPUT {
+    type filter hook input priority filter; policy drop;
+    # les règles de filtrage pour INPUT
+    iif lo accept
+
+    # accepter les réponses aux datagrammes qu'on envoie
+    ct state { established, related } accept
+  }
+  chain FORWARD {
+    type filter hook forward priority filter; policy drop;
+    # les règles de filtrage pour FORWARD
+
+    # accepter les réponses aux datagrammes qu'on envoie
+    ct state { established, related } accept
+  }
+  chain OUTPUT {
+    type filter hook output priority filter; policy accept;
+    # les règles de filtrage pour OUTPUT
+  }
+}

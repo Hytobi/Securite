@@ -1,0 +1,41 @@
+flush ruleset
+define localnet=10.0.0.0/8
+
+table inet FILTER {
+
+  chain ipspoofing {
+    iif eth1 ip saddr $localnet drop # on refuse l'entré des truc qui ressemble a mon ip
+    iif eth0 ip saddr != $localnet reject # a l'interieur je dois avoir qqc qui ressemble a mon addresse local
+  }
+  chain wkp {
+    tcp dport {135-139,4662} drop
+  }
+
+  chain INPUT {
+    type filter hook input priority filter; policy drop;
+    # les règles de filtrage pour INPUT
+    iif lo accept
+
+    # accepter les réponses aux datagrammes qu'on envoie
+    ct state { established, related } accept
+
+    jump ipspoofing
+    jump wkp
+    ip saddr 1.30.30.30 tcp dport ssh log prefix "connexion ssh: "
+    ip saddr 1.30.30.30 tcp dport ssh accept
+  }
+  chain FORWARD {
+    type filter hook forward priority filter; policy drop;
+    # les règles de filtrage pour FORWARD
+
+    # accepter les réponses aux datagrammes qu'on envoie
+    ct state { established, related } accept
+
+    jump ipspoofing
+    jump wkp
+  }
+  chain OUTPUT {
+    type filter hook output priority filter; policy accept;
+    # les règles de filtrage pour OUTPUT
+  }
+}
