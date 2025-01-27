@@ -25,3 +25,9 @@ journalctl -e # "? connection" pour faire une recherche
 
 
 
+## Exo 4
+
+# avant l'import declarer les domaines dans /etc/hosts
+# 10.1.0.4 mail.mondomaine.fr etc ...
+
+nft -f /mnt/host/home/Securite/tp/tp2/exo4.nft

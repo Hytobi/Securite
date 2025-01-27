@@ -1,0 +1,74 @@
+flush ruleset
+
+define fixes=10.1.0.0/17
+define portables=10.1.128.0/17
+
+table inet FILTER {
+  chain ipspoofing {
+    # Eviter l'IP spoofing : vérifier que les paquets viennent des interfaces correctes
+    # iifname si le nom ne changera jamais
+    iif eth0 ip saddr != $fixes reject
+    iif eth1 ip saddr != $portables reject
+    iif eth2 ip saddr {$fixes, $portables} reject # drop si pas une entreprise
+  }
+
+  chain noInternalCom {
+    # Interdire le trafic direct entre les réseaux fixes et portables
+    
+  }
+
+  chain INPUT {
+    type filter hook input priority filter; policy drop;
+    iif lo accept
+
+    # Accepter les réponses aux datagrammes envoyés (connexions établies et liées)
+    ct state { established, related } accept
+
+    jump ipspoofing
+
+    # Autoriser l'accès SSH depuis l'unique machine de l'administrateur (master.mondomaine.fr)
+    ip saddr master.mondomaine.fr tcp dport ssh accept # ssh = 22
+
+    reject
+  }
+
+  chain FORWARD {
+    type filter hook forward priority filter; policy drop;
+
+    # Accepter les réponses aux datagrammes envoyés (connexions établies et liées)
+    ct state { established, related } accept
+
+    jump ipspoofing
+
+    # Autoriser l'accès aux serveurs DNS (1.1.1.4)
+    # 10.1.0.0/17 union 10.1.128.0/17 = 10.1.0.0/16
+    ip daddr 1.1.1.4 ip saddr 10.1.0.0/16 udp dport domain accept # domaine = 53
+    # ou bien ip daddr 1.1.1.4 ip saddr {$fixes, $portables} udp dport domain accept
+
+    # Autoriser le relai de messagerie à accéder au serveur de messagerie du FAI (smtp.fai.fr)
+    ip saddr mail.mondomaine.fr ip daddr smtp.fai.fr tcp dport smtp accept # smtp = 25
+    ip saddr smtp.fai.fr ip daddr mail.mondomaine.fr tcp dport smtp accept
+
+    # Autoriser l’accès à votre serveur web depuis l’internet
+    ip daddr www.mondomaine.fr tcp dport {http, https} accept
+
+    # Autoriser le proxy web à accéder à Internet
+    ip saddr {10.1.0.10, 10.1.128.10} oif eth2 tcp dport {http, https} accept
+
+    # Interdire toute connexion web directe qui ne passerait pas par le proxy
+    oif eth2 tcp dport {http, https} reject
+
+    # Autoriser l'accès SSH, POP3, SMTP, WWW depuis le deuxième site
+    ip saddr 10.2.0.0/16 ip daddr $fixes tcp dport {ssh,pop3,imap,smtp,http,https} accept 
+
+    # Bloquer la communication entre le réseau des machines fixes et celui des portables sauf pour le mail
+    ip saddr $portables ip daddr mail.mondomaine.fr tcp dport {pop3,imap,smtp} accept
+
+    reject
+  }
+
+  chain OUTPUT {
+    type filter hook output priority filter; policy accept;
+    # Les règles de filtrage pour OUTPUT peuvent être laissées ouvertes par défaut.
+  }
+}
